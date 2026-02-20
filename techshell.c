@@ -87,7 +87,7 @@ void interpret_input(void) {
         // if argument starts with quote
         if (*p == '"') {
             p++; // skip opening quote
-            argc[count++] = p;
+            argv[count++] = p;
 
             while (*p && *p != '"') {
                 p++;
@@ -255,4 +255,5 @@ void interpret_input(void) {
         int status;
         waitpid(pid, &status, 0);
     }
+
 }
