@@ -5,7 +5,7 @@
 // imports
 #include <stdio.h> // printf, fprintf, fgets, stderr, stdin, fflush
 #include <stdlib.h> // exit, getenv
-#include <string.h> // strcmp, strtok, strcspn
+#include <string.h> // strcmp, strcspn
 #include <unistd.h> // fork, execvp, getcwd, chdir, dup2
 #include <errno.h> // errno, EINVAL
 #include <sys/wait.h> // waitpid
@@ -16,6 +16,7 @@
 // 02/16/2026 added fork method to interpret_input
 // 02/18/2026 added exit, cd, and redirection methods to interpret_input
 // 02/19/2026 fixed cd by changing tokenization method
+// 02/27/2026 fixed cd bug
 
 // prototyping
 void print_cwd(void);
@@ -69,9 +70,9 @@ void interpret_input(void) {
     // tokenize into argv[] (an array of pointers)
     char *argv[256];
     int count = 0;
-
     char *p = input;
 
+    // loop through until end of the string
     while (*p != '\0' && count < 255) {
         
         // skip leading spaces
@@ -87,24 +88,27 @@ void interpret_input(void) {
         // if argument starts with quote
         if (*p == '"') {
             p++; // skip opening quote
-            argv[count++] = p;
+            argv[count++] = p; // save first argument
 
-            while (*p && *p != '"') {
+            while (*p && *p != '"') { // continue until second quote
                 p++;
             }
 
-            if (*p == '"') {
+            if (*p == '"') { // second quote
                 *p = '\0'; // terminate string
                 p++;
             }
         }
+
         // regular tokenization
         else {
             argv[count++] = p;
 
+            // move forward until space or tab
             while (*p && *p != ' ' && *p != '\t')
                 p++;
 
+            // terminate
             if (*p) {
                 *p = '\0';
                 p++;
@@ -118,7 +122,7 @@ void interpret_input(void) {
     char *input_file = NULL;
     char *output_file = NULL;
 
-    // check for redirection symbols
+    // loop through whole count
     for (int i = 0; i < count; i++) {
 
         // input redirection
@@ -130,14 +134,15 @@ void interpret_input(void) {
                 return;
             }
 
+            // assigns the filename following < to variable input_file
             input_file = argv[i + 1];
 
-            // remove "< file" from argv
+            // remove "< file" from argv to prevent error with execvp()
             for (int j = i; j + 2 <= count; j++) {
                 argv[j] = argv[j + 2];
             }
 
-            count -= 2;
+            count -= 2; // just removed two args
             i--; // recheck index
         }
 
@@ -150,14 +155,15 @@ void interpret_input(void) {
                 return;
             }
 
+            // assigns the filename following > to variable input_file
             output_file = argv[i + 1];
 
-            // remove "> file" from argv
+            // remove "> file" from argv to prevent error with execvp()
             for (int j = i; j + 2 <= count; j++) {
                 argv[j] = argv[j + 2];
             }
 
-            count -= 2;
+            count -= 2; // just removed two args
             i--; // recheck index
         }
     }
@@ -175,12 +181,14 @@ void interpret_input(void) {
 
         // if no argument, go to home directory
         if (count == 1) {
+            // store pointer to string in home
             char *home = getenv("HOME");
             // throw error
             if (home == NULL || chdir(home) != 0) {
                 fprintf(stderr, "Error %d (%s)\n", errno, strerror(errno));
             }
         }
+        
         else {
             // cd with argument
             if (chdir(argv[1]) != 0) {
@@ -255,5 +263,4 @@ void interpret_input(void) {
         int status;
         waitpid(pid, &status, 0);
     }
-
 }
