@@ -21,6 +21,3 @@ Go to the techshell.c file in the repository and copy the code, then paste it in
 - Concatenate: cat [filename]
 - Remove: rm [filename]
 - Exit: exit
-
-### Not Working:
-If the file/directory has a space in its name, cd doesn't work
